@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NDC INVENTORY SYSTEM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: #0f172a; 
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        .glass-card { 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+        }
+
+        .category-card:hover { 
+            transform: translateY(-8px); 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+
+        .status-available { background: #065f46; color: #a7f3d0; }
+        .status-unavailable { background: #991b1b; color: #fecaca; }
+        .status-pending { background: #854d0e; color: #fef08a; }
+        
+        .lang-btn {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .lang-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+        }
+
+        .role-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .role-card.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .page-content { display: none; }
+        .page-content.active { display: block; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- 1. LANGUAGE SELECTION -->
+    <div id="langSelectionSection" class="fixed inset-0 z-[60] flex items-center justify-center bg-[#0a0f1e]">
+        <div class="w-full max-w-lg p-10 glass-card rounded-3xl shadow-2xl mx-4 text-center">
+            <div class="flex justify-center mb-8">
+                <img src="https://lh3.googleusercontent.com/d/1ldTpOtiNO3ia1fjyqJM65rEbbbSG6xX_" alt="NDC Logo" class="h-16 w-auto">
+            </div>
+            <h2 class="text-xl font-bold text-slate-400 mb-2 uppercase tracking-widest">Setup</h2>
+            <h3 class="text-2xl font-black text-white mb-8 tracking-tight">Choose Language / Pilih Bahasa</h3>
+            <div class="grid grid-cols-1 gap-4">
+                <button onclick="selectLanguage('EN')" class="lang-btn w-full p-5 rounded-2xl bg-white/5 flex items-center justify-between group">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">🇺🇸</span>
+                        <span class="font-bold text-white text-lg">English</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-blue-500"></i>
+                </button>
+                <button onclick="selectLanguage('BM')" class="lang-btn w-full p-5 rounded-2xl bg-white/5 flex items-center justify-between group">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">🇲🇾</span>
+                        <span class="font-bold text-white text-lg">Bahasa Melayu</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-slate-600"></i>
+                </button>
+                <button onclick="selectLanguage('JP')" class="lang-btn w-full p-5 rounded-2xl bg-white/5 flex items-center justify-between group">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">🇯🇵</span>
+                        <span class="font-bold text-white text-lg">日本語 (Japanese)</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-slate-600"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. LOGIN -->
+    <div id="loginSection" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0f1e] hidden">
+        <div class="w-full max-w-md p-10 glass-card rounded-3xl shadow-2xl mx-4 text-center">
+            <div class="flex justify-center mb-8">
+                <img src="https://lh3.googleusercontent.com/d/1ldTpOtiNO3ia1fjyqJM65rEbbbSG6xX_" alt="NDC Logo" class="h-14 w-auto">
+            </div>
+            <h2 class="text-2xl font-black text-white uppercase tracking-wider mb-8" data-lang="login_title">NDC INVENTORY</h2>
+            
+            <div class="flex gap-2 mb-8 bg-slate-800/50 p-1.5 rounded-2xl">
+                <button onclick="setRole('staff')" id="roleStaff" class="role-card flex-1 py-3 rounded-xl flex flex-col items-center gap-1 active">
+                    <i class="fas fa-users text-sm text-slate-400"></i>
+                    <span class="text-[10px] font-bold uppercase" data-lang="role_staff">Staff / User</span>
+                </button>
+                <button onclick="setRole('admin')" id="roleAdmin" class="role-card flex-1 py-3 rounded-xl flex flex-col items-center gap-1">
+                    <i class="fas fa-user-shield text-sm text-slate-400"></i>
+                    <span class="text-[10px] font-bold uppercase" data-lang="role_admin">Admin</span>
+                </button>
+            </div>
+
+            <div class="space-y-5 text-left">
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-2" data-lang="password_label">Password</label>
+                    <input type="password" id="loginPass" class="w-full px-5 py-4 rounded-xl bg-slate-800/50 border border-slate-700 text-white outline-none focus:border-blue-500 transition-colors" placeholder="••••••••">
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all" data-lang="login_btn">LOGIN</button>
+                <p id="loginError" class="text-red-400 text-sm text-center hidden font-medium">Wrong Password!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MAIN APP -->
+    <div id="appSection" class="hidden">
+        <nav class="bg-slate-900/80 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
+            <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
+                <div class="flex items-center space-x-4 cursor-pointer" onclick="showPage('home')">
+                    <img src="https://lh3.googleusercontent.com/d/1ldTpOtiNO3ia1fjyqJM65rEbbbSG6xX_" alt="Logo" class="h-10 w-auto">
+                    <span class="font-bold text-xl text-white uppercase tracking-tighter hidden sm:block">NDC INVENTORY</span>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <button id="navAdminBtn" onclick="showPage('approval')" class="hidden relative bg-slate-800 border border-slate-700 px-4 py-2 rounded-lg text-sm font-bold text-slate-300 flex items-center gap-2">
+                        <i class="fas fa-user-shield"></i>
+                        <span data-lang="nav_management">Management</span>
+                        <span id="pendingBadge" class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full">0</span>
+                    </button>
+                    
+                    <div class="h-8 w-[1px] bg-slate-800 mx-2"></div>
+                    
+                    <button onclick="logout()" class="text-slate-400 hover:text-red-400 font-bold text-sm" data-lang="logout_btn">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto p-4 md:p-8">
+            
+            <!-- PAGE: DASHBOARD -->
+            <div id="page-home" class="page-content active">
+                <div class="mb-10 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h1 class="text-4xl font-black text-white tracking-tight" data-lang="home_title">Dashboard</h1>
+                        <p class="text-slate-400 text-lg" data-lang="home_subtitle">NDC Inventory Management</p>
+                    </div>
+                    <div id="currentUserTag" class="bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700 text-xs font-bold text-blue-400">
+                        <i class="fas fa-user mr-2"></i> Role: Staff
+                    </div>
+                </div>
+
+                <!-- STATS SECTION -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="lg:col-span-2 glass-card rounded-3xl p-8">
+                        <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                            <i class="fas fa-chart-pie text-blue-500"></i>
+                            <span data-lang="stat_distribution">Unit Distribution</span>
+                        </h3>
+                        <div id="categoryStatsContainer" class="space-y-6"></div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="glass-card rounded-3xl p-6 border-l-4 border-l-green-500">
+                            <p class="text-slate-400 text-[10px] font-black uppercase mb-1 tracking-widest" data-lang="available_label">AVAILABLE</p>
+                            <h4 class="text-3xl font-black text-white" id="statAvailable">0</h4>
+                        </div>
+                        <div class="glass-card rounded-3xl p-6 border-l-4 border-l-orange-500">
+                            <p class="text-slate-400 text-[10px] font-black uppercase mb-1 tracking-widest" data-lang="borrowed_label">BORROWED</p>
+                            <h4 class="text-3xl font-black text-white" id="statBorrowed">0</h4>
+                        </div>
+                        <div class="glass-card rounded-3xl p-6 border border-blue-500/30 bg-blue-500/5">
+                            <h4 class="text-xs font-black text-blue-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                <i class="fas fa-gavel"></i> <span data-lang="rules_title">Rules & Regulations</span>
+                            </h4>
+                            <ul class="text-[10px] text-slate-300 space-y-2 list-disc pl-4" id="rulesList">
+                                <li data-lang="rule_1">Return equipment in original condition.</li>
+                                <li data-lang="rule_2">Report any damages immediately to Admin.</li>
+                                <li data-lang="rule_3">Borrowing period max 7 days unless approved.</li>
+                                <li data-lang="rule_4">Late returns may affect future borrowing.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CATEGORIES GRID -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8" id="categoryGrid"></div>
+            </div>
+
+            <!-- PAGE: CATEGORY ITEMS -->
+            <div id="page-category" class="page-content">
+                <button onclick="showPage('home')" class="mb-4 text-blue-400 font-bold flex items-center group">
+                    <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i> <span data-lang="back_menu">Back</span>
+                </button>
+                <h1 id="categoryTitle" class="text-4xl font-black text-white mb-10 uppercase tracking-tight">Category</h1>
+                <div id="itemsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+            </div>
+
+            <!-- PAGE: APPROVAL -->
+            <div id="page-approval" class="page-content">
+                <button onclick="showPage('home')" class="mb-4 text-blue-400 font-bold flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i> <span data-lang="back_menu">Back</span>
+                </button>
+                <h1 class="text-4xl font-black text-white mb-2" data-lang="mgmt_title">Management Approval</h1>
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white">KH</div>
+                    <div>
+                        <p class="text-white font-bold leading-none">Kamarul Hattar (Admin)</p>
+                        <p class="text-slate-500 text-xs">fadilnordzi@gmail.com</p>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-3xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-800/80 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                <tr>
+                                    <th class="px-6 py-5" data-lang="tbl_item">Equipment</th>
+                                    <th class="px-6 py-5" data-lang="tbl_borrower">Borrower</th>
+                                    <th class="px-6 py-5" data-lang="tbl_action">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approvalTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="emptyApproval" class="p-20 text-center hidden">
+                        <p class="text-slate-500 font-bold" data-lang="no_pending">No pending requests.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL -->
+    <div id="actionModal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center hidden p-4 backdrop-blur-sm">
+        <div class="bg-slate-900 w-full max-w-md rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
+            <div class="p-8 text-center border-b border-slate-800/50">
+                <h3 class="text-2xl font-black text-white mb-2" data-lang="borrow_modal_title">Borrow Request</h3>
+                <p class="text-slate-500 text-sm" data-lang="approval_note">Requires Kamarul Hattar's approval.</p>
+            </div>
+            <div class="p-8 space-y-4">
+                <input type="hidden" id="modalItemId">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-400 mb-1" data-lang="borrower_name_label">Borrower Name</label>
+                    <input type="text" id="borrowerName" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white outline-none" placeholder="Enter name...">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-400 mb-1" data-lang="date_return_label">Expected Return Date</label>
+                    <input type="date" id="returnDate" class="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white">
+                </div>
+            </div>
+            <div class="bg-slate-800/50 p-6 flex justify-end gap-3">
+                <button onclick="closeModal('actionModal')" class="px-6 py-3 text-slate-400 font-bold" data-lang="cancel_btn">Cancel</button>
+                <button onclick="submitBorrow()" id="modalSubmitBtn" class="px-8 py-3 bg-blue-600 text-white rounded-xl font-black flex items-center gap-2">
+                    <span id="submitBtnText" data-lang="submit_req_btn">Submit</span>
+                    <div id="submitLoading" class="loading-spinner hidden"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] bg-blue-600 text-white px-8 py-4 rounded-2xl shadow-2xl font-bold opacity-0 transition-all duration-500 pointer-events-none">
+        <span id="toastMsg">Success!</span>
+    </div>
+
+    <script>
+        const PASS_STAFF = "user123";
+        const PASS_ADMIN = "admin123"; 
+        const DGM_EMAIL = "fadilnordzi@gmail.com";
+        const apiKey = ""; 
+
+        let currentLang = 'EN';
+        let currentUserRole = 'staff'; 
+        let inventoryData = [];
+
+        const translations = {
+            EN: {
+                login_title: "NDC INVENTORY",
+                role_staff: "STAFF / USER",
+                role_admin: "ADMIN",
+                password_label: "Password",
+                login_btn: "LOGIN",
+                logout_btn: "LOGOUT",
+                home_title: "Dashboard",
+                home_subtitle: "NDC Inventory Management System",
+                stat_distribution: "Equipment Distribution",
+                available_label: "AVAILABLE",
+                borrowed_label: "BORROWED",
+                cat_camera: "CAMERA",
+                cat_lens: "LENS",
+                cat_laptop: "LAPTOP",
+                cat_tablets: "TABLETS",
+                cat_lighting: "LIGHTING",
+                cat_accessories: "ACCESSORIES",
+                back_menu: "Back",
+                nav_management: "Management Panel",
+                borrow_modal_title: "Borrow Request",
+                approval_note: "Admin: Kamarul Hattar",
+                borrower_name_label: "Borrower Name",
+                date_return_label: "Return Date",
+                cancel_btn: "Cancel",
+                submit_req_btn: "Submit",
+                mgmt_title: "Admin Approval",
+                tbl_item: "Item",
+                tbl_borrower: "Borrower",
+                tbl_action: "Action",
+                no_pending: "No pending requests.",
+                btn_approve: "APPROVE",
+                btn_reject: "REJECT",
+                btn_borrow: "BORROW",
+                btn_return: "RETURN",
+                status_available: "Available",
+                status_borrowed: "Borrowed",
+                status_pending: "Pending Approval",
+                unit_label: "Units",
+                msg_submitted: "Notification email sent to Admin.",
+                msg_approved: "Request Approved!",
+                msg_returned: "Item Returned.",
+                role_tag: "Role",
+                rules_title: "Rules & Regulations",
+                rule_1: "Return equipment in original condition.",
+                rule_2: "Report any damages immediately to Admin.",
+                rule_3: "Borrowing period max 7 days unless approved.",
+                rule_4: "Late returns may affect future borrowing."
+            },
+            BM: {
+                login_title: "INVENTORI NDC",
+                role_staff: "STAFF / PENGGUNA",
+                role_admin: "ADMIN",
+                password_label: "Katalaluan",
+                login_btn: "MASUK",
+                logout_btn: "KELUAR",
+                home_title: "Papan Pemuka",
+                home_subtitle: "Sistem Pengurusan Inventori NDC",
+                stat_distribution: "Agihan Peralatan",
+                available_label: "SEDIA ADA",
+                borrowed_label: "DIPINJAM",
+                cat_camera: "KAMERA",
+                cat_lens: "LENSA",
+                cat_laptop: "LAPTOP",
+                cat_tablets: "TABLET",
+                cat_lighting: "LAMPU/CAHAYA",
+                cat_accessories: "AKSESORI",
+                back_menu: "Kembali",
+                nav_management: "Panel Pengurusan",
+                borrow_modal_title: "Permohonan Pinjam",
+                approval_note: "Admin: Kamarul Hattar",
+                borrower_name_label: "Nama Peminjam",
+                date_return_label: "Tarikh Pulang",
+                cancel_btn: "Batal",
+                submit_req_btn: "Hantar",
+                mgmt_title: "Kelulusan Admin",
+                tbl_item: "Alatan",
+                tbl_borrower: "Peminjam",
+                tbl_action: "Tindakan",
+                no_pending: "Tiada permohonan baru.",
+                btn_approve: "LULUS",
+                btn_reject: "TOLAK",
+                btn_borrow: "PINJAM",
+                btn_return: "PULANG",
+                status_available: "Sedia Ada",
+                status_borrowed: "Dipinjam",
+                status_pending: "Menunggu Kelulusan",
+                unit_label: "Unit",
+                msg_submitted: "E-mel notifikasi telah dihantar ke Admin.",
+                msg_approved: "Permohonan Diluluskan!",
+                msg_returned: "Telah Dipulangkan.",
+                role_tag: "Peranan",
+                rules_title: "Terma & Peraturan",
+                rule_1: "Pulangkan alatan dalam keadaan asal.",
+                rule_2: "Laporkan kerosakan segera kepada Admin.",
+                rule_3: "Tempoh pinjaman maks 7 hari kecuali diluluskan.",
+                rule_4: "Kelewatan mungkin menjejaskan pinjaman masa depan."
+            },
+            JP: {
+                login_title: "NDC 在庫システム",
+                role_staff: "スタッフ / ユーザー",
+                role_admin: "管理者",
+                password_label: "パスワード",
+                login_btn: "ログイン",
+                logout_btn: "ログアウト",
+                home_title: "ダッシュボード",
+                home_subtitle: "NDC在庫管理システム",
+                stat_distribution: "機器の分布",
+                available_label: "利用可能",
+                borrowed_label: "貸出中",
+                cat_camera: "カメラ",
+                cat_lens: "レンズ",
+                cat_laptop: "ラップトップ",
+                cat_tablets: "タブレット",
+                cat_lighting: "照明",
+                cat_accessories: "アクセサリー",
+                back_menu: "戻る",
+                nav_management: "管理パネル",
+                borrow_modal_title: "借用リクエスト",
+                approval_note: "管理者: カマル・ハッタール",
+                borrower_name_label: "借用者名",
+                date_return_label: "返却予定日",
+                cancel_btn: "キャンセル",
+                submit_req_btn: "送信",
+                mgmt_title: "管理者承認",
+                tbl_item: "アイテム",
+                tbl_borrower: "借用者",
+                tbl_action: "アクション",
+                no_pending: "保留中のリクエストはありません。",
+                btn_approve: "承認",
+                btn_reject: "却下",
+                btn_borrow: "借りる",
+                btn_return: "返却",
+                status_available: "在庫あり",
+                status_borrowed: "貸出中",
+                status_pending: "承認待ち",
+                unit_label: "ユニット",
+                msg_submitted: "管理者に通知メールが送信されました。",
+                msg_approved: "承認されました！",
+                msg_returned: "返却されました。",
+                role_tag: "役割",
+                rules_title: "規則と規定",
+                rule_1: "元の状態で返却してください。",
+                rule_2: "損傷は直ちに管理者に報告してください。",
+                rule_3: "借用期間は最大7日間です。",
+                rule_4: "返却の遅れは今後の借用に影響する場合があります。"
+            }
+        };
+
+        function selectLanguage(lang) {
+            currentLang = lang;
+            applyTranslations();
+            document.getElementById('langSelectionSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+        }
+
+        function applyTranslations() {
+            const langSet = translations[currentLang];
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                const key = el.getAttribute('data-lang');
+                if(langSet[key]) el.innerText = langSet[key];
+            });
+            renderCategoryGrid();
+            updateStatsUI();
+        }
+
+        function setRole(role) {
+            currentUserRole = role;
+            document.getElementById('roleStaff').classList.toggle('active', role === 'staff');
+            document.getElementById('roleAdmin').classList.toggle('active', role === 'admin');
+            document.getElementById('loginPass').value = "";
+            document.getElementById('loginError').classList.add('hidden');
+        }
+
+        function handleLogin() {
+            const pass = document.getElementById('loginPass').value;
+            const targetPass = (currentUserRole === 'admin') ? PASS_ADMIN : PASS_STAFF;
+
+            if (pass === targetPass) {
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('appSection').classList.remove('hidden');
+                
+                const navBtn = document.getElementById('navAdminBtn');
+                const roleTag = document.getElementById('currentUserTag');
+                const roleLabel = translations[currentLang]['role_' + currentUserRole];
+                
+                roleTag.innerHTML = `<i class="fas fa-user mr-2"></i> ${translations[currentLang].role_tag}: ${roleLabel}`;
+
+                if(currentUserRole === 'admin') {
+                    navBtn.classList.remove('hidden');
+                } else {
+                    navBtn.classList.add('hidden');
+                }
+
+                loadData();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        function logout() { location.reload(); }
+
+        function loadData() {
+            const imgCam = "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600";
+            const imgLens = "https://lh3.googleusercontent.com/d/1TEvHO0mQyyqvWMEdrGFs-kr0WEf7sJVC";
+            const imgLaptop = "https://lh3.googleusercontent.com/d/1AW3hcewu3GSxOtsrjdzWZqn7f0wWaksf";
+            const imgTab = "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600";
+            const imgLight = "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=600";
+            const imgAcc = "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600";
+            
+            inventoryData = [
+                { id: 'C1', Category: 'Camera', SubCategory: 'Sony A7C', Brand: 'Sony', Condition: 'Baik', Status: 'Available', Borrower: '-', ImageUrl: imgCam },
+                { id: 'C2', Category: 'Camera', SubCategory: 'Sony FX30', Brand: 'Sony', Condition: 'Baik', Status: 'Available', Borrower: '-', ImageUrl: imgCam },
+                { id: 'L1', Category: 'Lens', SubCategory: '70-200mm GM', Brand: 'Sony', Condition: 'Baik', Status: 'Available', Borrower: '-', ImageUrl: imgLens },
+                { id: 'L2', Category: 'Lens', SubCategory: '24-70mm GM', Brand: 'Sony', Condition: 'Baik', Status: 'Available', Borrower: '-', ImageUrl: imgLens },
+                { id: 'M1', Category: 'Laptop', SubCategory: 'Macbook Pro M2', Brand: 'Apple', Condition: 'Baik', Status: 'Available', Borrower: '-', ImageUrl: imgLaptop },
+                { id: 'T1', Category: 'Tablets', SubCategory: 'iPad Pro M2', Brand: 'Apple', Condition: 'Baik', Status: 'Available', Borrower: '-', ImageUrl: imgTab },
+                { id: 'T2', Category: 'Tablets', SubCategory: 'Galaxy Tab S9', Brand: 'Samsung', Condition: 'Baik', Status: 'Available', Borrower: '-', ImageUrl: imgTab },
+                { id: 'LT1', Category: 'Lighting', SubCategory: 'Aputure 600d', Brand: 'Aputure', Condition: 'Baik', Status: 'Available', Borrower: '-', ImageUrl: imgLight },
+                { id: 'LT2', Category: 'Lighting', SubCategory: 'Nanlite Tube', Brand: 'Nanlite', Condition: 'Baik', Status: 'Available', Borrower: '-', ImageUrl: imgLight },
+                { id: 'A1', Category: 'Accessories', SubCategory: 'Wireless Mic', Brand: 'Rode', Condition: 'Baik', Status: 'Available', Borrower: '-', ImageUrl: imgAcc },
+            ];
+            
+            renderCategoryGrid();
+            updateStatsUI();
+        }
+
+        function renderCategoryGrid() {
+            const cats = ['Camera', 'Lens', 'Laptop', 'Tablets', 'Lighting', 'Accessories'];
+            const grid = document.getElementById('categoryGrid');
+            const langSet = translations[currentLang];
+            
+            const images = {
+                Camera: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600",
+                Lens: "https://lh3.googleusercontent.com/d/1TEvHO0mQyyqvWMEdrGFs-kr0WEf7sJVC",
+                Laptop: "https://lh3.googleusercontent.com/d/1AW3hcewu3GSxOtsrjdzWZqn7f0wWaksf",
+                Tablets: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600",
+                Lighting: "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=600",
+                Accessories: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600"
+            };
+
+            grid.innerHTML = cats.map(cat => {
+                const count = inventoryData.filter(i => i.Category === cat).length;
+                const label = langSet['cat_' + cat.toLowerCase()] || cat;
+                return `
+                    <div onclick="showCategory('${cat}')" class="category-card cursor-pointer group relative overflow-hidden rounded-3xl aspect-[16/10] bg-slate-800">
+                        <img src="${images[cat]}" class="w-full h-full object-cover opacity-60 group-hover:scale-110 transition duration-700" alt="${cat}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black flex flex-col justify-end p-6">
+                          <h3 class="text-white text-xl font-black">${label}</h3>
+                          <p class="text-blue-400 text-sm font-medium">${count} ${langSet.unit_label}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateStatsUI() {
+            const langSet = translations[currentLang];
+            const availCount = inventoryData.filter(i => i.Status === 'Available').length;
+            const borrowedCount = inventoryData.filter(i => i.Status === 'Borrowed').length;
+            
+            document.getElementById('statAvailable').innerText = availCount;
+            document.getElementById('statBorrowed').innerText = borrowedCount;
+            
+            const pending = inventoryData.filter(i => i.Status === 'Pending Approval').length;
+            const badge = document.getElementById('pendingBadge');
+            if(pending > 0) { 
+                badge.innerText = pending; 
+                badge.classList.remove('hidden'); 
+            } else { 
+                badge.classList.add('hidden'); 
+            }
+
+            const cats = ['Camera', 'Lens', 'Laptop', 'Tablets', 'Lighting', 'Accessories'];
+            const container = document.getElementById('categoryStatsContainer');
+            container.innerHTML = cats.map(cat => {
+                const count = inventoryData.filter(i => i.Category === cat).length;
+                const perc = inventoryData.length > 0 ? (count / inventoryData.length) * 100 : 0;
+                const label = langSet['cat_' + cat.toLowerCase()] || cat;
+                return `
+                    <div class="mb-4">
+                        <div class="flex justify-between text-[10px] font-black text-white mb-2 uppercase tracking-widest">
+                            <span>${label}</span>
+                            <span>${count} Units</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div class="stat-bar bg-blue-600 h-full" style="width:${perc}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if(document.getElementById('page-approval').classList.contains('active')) renderApprovalTable();
+        }
+
+        async function sendEmailNotification(borrowerName, itemName, returnDate) {
+            try {
+                // Using Gemini API for simulation
+                await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `System Log: Generate a professional notification for Admin (Kamarul Hattar) regarding a new borrow request. Borrower: ${borrowerName}, Item: ${itemName}, Expected Return: ${returnDate}. Simulate sending to fadilnordzi@gmail.com.` }] }]
+                    })
+                });
+            } catch (err) {
+                console.error("Notification Failed:", err);
+            }
+        }
+
+        async function submitBorrow() {
+            const id = document.getElementById('modalItemId').value;
+            const name = document.getElementById('borrowerName').value;
+            const date = document.getElementById('returnDate').value;
+            
+            if(!name || !date) return showToast("Please fill all fields");
+
+            const submitBtn = document.getElementById('modalSubmitBtn');
+            const loading = document.getElementById('submitLoading');
+            const btnText = document.getElementById('submitBtnText');
+
+            submitBtn.disabled = true;
+            loading.classList.remove('hidden');
+            btnText.innerText = "...";
+
+            const idx = inventoryData.findIndex(i => i.id === id);
+            const item = inventoryData[idx];
+
+            await sendEmailNotification(name, item.SubCategory, date);
+
+            inventoryData[idx].Status = 'Pending Approval';
+            inventoryData[idx].Borrower = name;
+            inventoryData[idx].ReturnDate = date;
+
+            loading.classList.add('hidden');
+            submitBtn.disabled = false;
+            btnText.innerText = translations[currentLang].submit_req_btn;
+
+            closeModal('actionModal');
+            updateStatsUI();
+            showCategory(item.Category);
+            showToast(translations[currentLang].msg_submitted);
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            window.scrollTo(0,0);
+            
+            if(pageId === 'approval') renderApprovalTable();
+        }
+
+        function showCategory(cat) {
+            const langSet = translations[currentLang];
+            document.getElementById('categoryTitle').innerText = langSet['cat_' + cat.toLowerCase()] || cat;
+            const items = inventoryData.filter(i => i.Category === cat);
+            const container = document.getElementById('itemsContainer');
+            
+            container.innerHTML = items.map(item => {
+                let statusClass = "status-available";
+                let statusText = langSet.status_available;
+                let btnHtml = `<button onclick="openBorrowModal('${item.id}')" class="w-full bg-blue-600 py-3 rounded-xl font-bold text-white">${langSet.btn_borrow}</button>`;
+
+                if(item.Status === 'Pending Approval') {
+                    statusClass = "status-pending";
+                    statusText = langSet.status_pending;
+                    btnHtml = `<div class="text-center py-3 text-slate-500 font-bold italic">${langSet.status_pending}...</div>`;
+                } else if(item.Status === 'Borrowed') {
+                    statusClass = "status-unavailable";
+                    statusText = langSet.status_borrowed;
+                    btnHtml = currentUserRole === 'admin' ? 
+                        `<button onclick="returnItem('${item.id}')" class="w-full bg-slate-700 py-3 rounded-xl font-bold text-white">${langSet.btn_return}</button>` :
+                        `<div class="text-center py-3 text-slate-500 font-bold">${item.Borrower}</div>`;
+                }
+
+                return `
+                    <div class="glass-card rounded-3xl overflow-hidden group">
+                        <div class="h-48 overflow-hidden relative">
+                            <img src="${item.ImageUrl}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <span class="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="p-6">
+                            <h4 class="text-white font-black text-xl mb-1">${item.SubCategory}</h4>
+                            <p class="text-slate-500 text-sm mb-6">${item.Brand} • ID: ${item.id}</p>
+                            ${btnHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            showPage('category');
+        }
+
+        function openBorrowModal(id) {
+            document.getElementById('modalItemId').value = id;
+            document.getElementById('borrowerName').value = "";
+            document.getElementById('actionModal').classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function renderApprovalTable() {
+            const pendingItems = inventoryData.filter(i => i.Status === 'Pending Approval');
+            const tbody = document.getElementById('approvalTableBody');
+            const empty = document.getElementById('emptyApproval');
+            const langSet = translations[currentLang];
+
+            if(pendingItems.length === 0) {
+                tbody.innerHTML = "";
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            tbody.innerHTML = pendingItems.map(item => `
+                <tr class="border-b border-slate-800/50 hover:bg-white/5 transition-colors">
+                    <td class="px-6 py-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-slate-800 flex-shrink-0 flex items-center justify-center">
+                                <i class="fas fa-box text-blue-500"></i>
+                            </div>
+                            <div>
+                                <p class="text-white font-bold">${item.SubCategory}</p>
+                                <p class="text-slate-500 text-[10px]">${item.id}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-6">
+                        <p class="text-slate-300 font-medium">${item.Borrower}</p>
+                        <p class="text-slate-500 text-[10px]">Until: ${item.ReturnDate}</p>
+                    </td>
+                    <td class="px-6 py-6">
+                        <div class="flex gap-2">
+                            <button onclick="approveRequest('${item.id}')" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-black transition-all">${langSet.btn_approve}</button>
+                            <button onclick="rejectRequest('${item.id}')" class="bg-slate-700 hover:bg-red-900 text-white px-4 py-2 rounded-lg text-xs font-black transition-all">${langSet.btn_reject}</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function approveRequest(id) {
+            const idx = inventoryData.findIndex(i => i.id === id);
+            inventoryData[idx].Status = 'Borrowed';
+            updateStatsUI();
+            showToast(translations[currentLang].msg_approved);
+        }
+
+        function rejectRequest(id) {
+            const idx = inventoryData.findIndex(i => i.id === id);
+            inventoryData[idx].Status = 'Available';
+            inventoryData[idx].Borrower = '-';
+            updateStatsUI();
+            showToast("Request Rejected");
+        }
+
+        function returnItem(id) {
+            const idx = inventoryData.findIndex(i => i.id === id);
+            inventoryData[idx].Status = 'Available';
+            inventoryData[idx].Borrower = '-';
+            updateStatsUI();
+            showToast(translations[currentLang].msg_returned);
+            // Refresh current category view if visible
+            const currentCat = inventoryData[idx].Category;
+            if(document.getElementById('page-category').classList.contains('active')) showCategory(currentCat);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.style.opacity = "1";
+            toast.style.bottom = "32px";
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.bottom = "16px";
+            }, 3000);
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('actionModal');
+            if (event.target == modal) closeModal('actionModal');
+        }
+    </script>
+</body>
+</html>
